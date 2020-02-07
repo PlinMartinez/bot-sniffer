@@ -113,7 +113,7 @@ while True:
             df2 = ordenes_binance(par)
             df2 = ordenar_df1(df2)
 
-            df = df[(df['timestamp'] > solucion)]
+            df2 = df2[(df2['timestamp'] > solucion)]
             df2 = df2[(df2['id'] > ultima_orden)]
             df = df.append(df2)
 
