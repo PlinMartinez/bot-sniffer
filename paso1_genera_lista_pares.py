@@ -23,8 +23,6 @@ import time
 import shelve
 import pandas as pd
 
-inicio = time.time()
-
 binance = ccxt.binance()   # INSTANCIA BINANCE
 
 mercados = binance.load_markets()  # CARGA MERCADOS
@@ -53,30 +51,23 @@ df = df.set_index('time')
 df['volatilidad'] = round((df['high'] - df['low']) / df['low'] * 100, 1)
 ayer = df['volatilidad'][-2]
 
-
-
-
-
-
-
-
-
-velocidad_pares = {} 
+velocidad_pares = {}
 
 for par in pares:
     ''' METE EN DICCIONARIO EL NUMERO DIAS / PAR ULTIMAS 500 ORDENES
           {'ADA/BNB': 1.6, 'ADA/BTC': 0.4, 'ADA/BUSD': 13.0}'''
     try:
-        print('empieza con el par ' + par)
+        print('Revisamos la velodidad del par ' + par)
         ordenes = binance.fetch_trades(par)
         primero = ordenes[0]['timestamp']
         ultimo = ordenes[-1]['timestamp']
         delay = ultimo - primero
         retraso = round(delay / (1000 * 60 * 60), 1)
         velocidad_pares[par] = retraso
+        print('La velocidad del par ' + par + 'es de ' + retraso)
         time.sleep(1)
     except:
-        print('el par este ha salido chungo' + par)
+        print('el par este ha salido chungo' + str(par))
 
 
 ''' GENERA LISTAS PARES VIVOS Y MUERTOS '''
@@ -94,25 +85,32 @@ obj = shelve.open('tablas')
 obj['velocidad_pares'] = velocidad_pares
 obj['pares_vivos_velocidad'] = pares_vivos_velocidad
 obj['pares_muertos_velocidad'] = pares_muertos_velocidad
-obj.close
+# obj.close
 
 
 volatilidad = {}
 
 for par in pares:
+
     ''' SACA VOLATILIDAD DIARIA DESDE CCXT
     {'ADA/BNB': 15.1, 'ADA/BTC': 15.1, 'ADA/BUSD': 15.3}'''
 
-    print('Empezamos a mirar OHLCV con el par ' + par)
-    ohlcv = binance.fetch_ohlcv(par, '1d')
-    df = pd.DataFrame(ohlcv)
-    df.columns = ['time', 'open', 'high', 'low', 'close', 'volume']
-    df['time'] = pd.to_datetime(df['time'], unit='ms')
-    df = df.set_index('time')
-    df['volatilidad'] = round((df['high'] - df['low']) / df['low'] * 100, 1)
-    ayer = df['volatilidad'][-2]
-    volatilidad[par] = ayer
-    time.sleep(1)
+    try:
+
+        print('Empezamos a mirar OHLCV con el par ' + par)
+        ohlcv = binance.fetch_ohlcv(par, '1d')
+        df = pd.DataFrame(ohlcv)
+        df.columns = ['time', 'open', 'high', 'low', 'close', 'volume']
+        df['time'] = pd.to_datetime(df['time'], unit='ms')
+        df = df.set_index('time')
+        df['volatilidad'] = round(
+            (df['high'] - df['low']) / df['low'] * 100, 1)
+        ayer = df['volatilidad'][-2]
+        volatilidad[par] = ayer
+        time.sleep(1)
+    except:
+
+        print('el par ' + par + ha fallado)
 
 
 pares_vivos_amplitud = []
@@ -125,11 +123,10 @@ for clave, valor in volatilidad.items():
         pares_vivos_amplitud.append(clave)
 
 
-obj = shelve.open('tablas')
+#obj = shelve.open('tablas')
 obj['pares_vivos_amplitud'] = pares_vivos_amplitud
 obj['pares_muertos_amplitud'] = pares_muertos_amplitud
-obj.close
-
+# obj.close
 
 
 pares_vivos = []
@@ -139,14 +136,9 @@ for item in pares_vivos_velocidad:
     if item in pares_vivos_amplitud:
         pares_vivos.append(item)
 
-obj = shelve.open('tablas')
+#obj = shelve.open('tablas')
 obj['pares_vivos'] = pares_vivos
+obj.close
 
 print('La lista de pares vivos es la siguiente ' + str(len(pares_vivos)))
 print(pares_vivos)
-
-fin = time.time()
-
-delay=fin-inicio
-delay=round(delay,2)
-print (delay)
